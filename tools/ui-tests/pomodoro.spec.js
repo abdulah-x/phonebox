@@ -137,3 +137,81 @@ test('a sequence longer than 48 steps is refused, not cut short', async ({ page 
   const p = await show(page, { focus: 1, break: 1, sequence: Array(49).fill('1 focus').join(', ') });
   await expect(p.sub).toHaveText('Sequence not understood: "more than 48 steps"');
 });
+
+// Sound when a step ends (#267). The AudioContext is stubbed: each started tone is recorded with its pitch and loudness.
+async function stubAudio(page) {
+  await page.addInitScript(() => {
+    window.__tones = [];
+    const param = (set) => ({ setValueAtTime: set, linearRampToValueAtTime: set, exponentialRampToValueAtTime() {} });
+    window.AudioContext = class {
+      constructor() { this.currentTime = 0; this.state = 'running'; this.destination = {}; }
+      resume() { return Promise.resolve(); }
+      createGain() { const g = { peak: 0, connect() {} }; g.gain = param((v) => { g.peak = Math.max(g.peak, v); }); return g; }
+      createOscillator() {
+        const o = { freq: 0, gain: null, stop() {} };
+        o.frequency = param((v) => { o.freq = v; });
+        o.connect = (g) => { o.gain = g; };
+        o.start = () => window.__tones.push({ freq: o.freq, peak: o.gain ? o.gain.peak : 0 });
+        return o;
+      }
+    };
+  });
+}
+const tones = (page) => page.evaluate(() => window.__tones);
+
+test('with the sound option on, a step end plays a tone at the chosen volume', async ({ page }) => {
+  await stubAudio(page);
+  const p = await show(page, { focus: 1, break: 1, sound: true, soundVolume: 50 });
+  await p.play();
+  await page.clock.fastForward(MIN + 1500);
+  await expect(p.label).toHaveText('Break');
+  const half = await tones(page);
+  expect(half.length).toBeGreaterThan(0);
+  // the same chime at full volume is twice as loud
+  await page.evaluate(async () => { window.__tones = []; (await import('/panel/main.js')).chime(100); });
+  const full = await tones(page);
+  expect(half[0].peak).toBeGreaterThan(0);
+  expect(half[0].peak / full[0].peak).toBeCloseTo(0.5, 5);
+});
+
+test('without the sound option a step end stays silent, as before', async ({ page }) => {
+  await stubAudio(page);
+  const p = await show(page, { focus: 1, break: 1 });
+  await p.play();
+  await page.clock.fastForward(MIN + 1500);
+  await expect(p.label).toHaveText('Break');
+  expect(await tones(page)).toEqual([]);
+});
+
+test('the end of the whole sequence sounds different from a step end', async ({ page }) => {
+  await stubAudio(page);
+  const p = await show(page, { sequence: '1 focus, 1 break', rounds: 1, sound: true });
+  await p.play();
+  await page.clock.fastForward(MIN + 1500);
+  await expect(p.label).toHaveText('Break');
+  const step = (await tones(page)).map((x) => x.freq);
+  await page.evaluate(() => { window.__tones = []; });
+  await page.clock.fastForward(MIN + 1500);
+  await expect(page.locator('#toast')).toContainText('Sequence finished');
+  const done = (await tones(page)).map((x) => x.freq);
+  expect(step.length).toBeGreaterThan(0);
+  expect(done.length).toBeGreaterThan(0);
+  expect(done).not.toEqual(step);
+});
+
+test('the night screen keeps the chime silent, as it does the vibration', async ({ page }) => {
+  await stubAudio(page);
+  await page.clock.install({ time: NOON });
+  await page.goto('/panel/style.css');
+  await page.evaluate(() => {
+    localStorage.clear();
+    localStorage.setItem('pb-demo-config', JSON.stringify({
+      night: { enabled: true, start: '11:00', end: '13:00' }, rules: [], shortcuts: [], display: { idleReturnSec: 0 },
+      pages: [{ id: 'p', title: 'Focus', widgets: [{ id: 'pomo', type: 'pomodoro', x: 0, y: 0, w: 6, h: 6, options: { sound: true } }] }],
+    }));
+  });
+  await page.goto('/panel/');
+  await expect(page.locator('body')).toHaveClass(/night/);
+  await page.evaluate(async () => (await import('/panel/main.js')).chime(100));
+  expect(await tones(page)).toEqual([]);
+});

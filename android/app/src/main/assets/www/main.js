@@ -147,6 +147,37 @@ export async function api(path, method = 'GET', timeout = 2500) {
 
 export const haptic = () => { try { bridge && bridge.haptic(); } catch (_) {} };
 export const buzz = (p) => { try { if (bridge && !nightOn && cfg.display?.vibrate !== false) bridge.buzz(p); } catch (_) {} };
+// One AudioContext for the whole panel: Chrome limits how many can be open, so a new one per chime would run out.
+let chimeCtx = null;
+/**
+ * A short tone for timers, made with Web Audio so the app needs no sound file. Silent on the night screen, like
+ * buzz(). volume is a percentage (10–100); finished plays a rising three-note pattern instead of two beeps.
+ */
+export const chime = (volume, finished = false) => {
+  try {
+    if (nightOn) return;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    if (!chimeCtx) chimeCtx = new Ctx();
+    // a context made without a tap starts suspended in a desktop browser; the phone's WebView allows playback
+    if (chimeCtx.state === 'suspended') { const r = chimeCtx.resume(); if (r && r.catch) r.catch(() => {}); }
+    const peak = 0.4 * Math.min(100, Math.max(10, +volume || 60)) / 100; // below 1, so two notes never clip
+    const notes = finished ? [660, 880, 1100] : [880, 880];
+    const t0 = chimeCtx.currentTime + 0.02;
+    notes.forEach((freq, i) => {
+      const at = t0 + i * 0.25, osc = chimeCtx.createOscillator(), gain = chimeCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, at);
+      gain.gain.setValueAtTime(0.0001, at);
+      gain.gain.linearRampToValueAtTime(peak, at + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.22); // a quick fade-out, no click at the end
+      osc.connect(gain);
+      gain.connect(chimeCtx.destination);
+      osc.start(at);
+      osc.stop(at + 0.24);
+    });
+  } catch (_) {}
+};
 export const transport = () => { try { return bridge ? bridge.transport() : ''; } catch (_) { return ''; } };
 
 /** h('div', 'cls', child, 'text', [more]) */
