@@ -1920,6 +1920,12 @@ export function setNight(on) {
   document.body.classList.toggle('night', on);
   applyBrightness(true);
 }
+/**
+ * Before widgets are built: a timer that ran out while the panel was closed rings during the build, so the night
+ * screen must already be on if the schedule says so (nightOn is null at start, and new settings may move the night).
+ * Only ever turns night on; tick() keeps the state up to date as before, so the day is unchanged.
+ */
+function nightBeforeBuild() { if (isNight(new Date()) && Date.now() > wakeUntil) setNight(true); }
 
 // ---------------------------------------------------------------- phone sensors
 // Room light (lux) and proximity come from the Android shell. Brightness can follow the room, the night screen can
@@ -2083,6 +2089,7 @@ export async function loadConfig() {
     if (first || JSON.stringify(cfg) !== before) {
       store.set('cfg', cfg);
       if (JSON.stringify(cfg) !== before) {
+        nightBeforeBuild();
         buildLayout();
         applyDisplay();
       }
@@ -2269,6 +2276,7 @@ function beat() {
 }
 
 // ---------------------------------------------------------------- start
+nightBeforeBuild();
 buildLayout();
 applyDisplay();
 tick();

@@ -215,3 +215,40 @@ test('the night screen keeps the chime silent, as it does the vibration', async 
   await page.evaluate(async () => (await import('/panel/main.js')).chime(100));
   expect(await tones(page)).toEqual([]);
 });
+
+// A focus step that ended while the panel was closed is counted when the panel opens. With the schedule saying night,
+// that must not ring: nightOn is still unset while the widgets are first built (#305 review).
+async function openWithExpiredStep(page, night) {
+  await stubAudio(page);
+  await page.addInitScript(() => {
+    window.__buzz = []; // the phone bridge, recording vibrations
+    window.Android = { battery: () => '{}', transport: () => 'usb', version: () => 'test', haptic() {}, buzz: (p) => window.__buzz.push(p),
+      setBrightness() {}, setVolumeKeys() {}, is24Hour: () => true };
+  });
+  await page.clock.install({ time: NOON });
+  await page.goto('/panel/style.css');
+  await page.evaluate((night) => {
+    localStorage.clear();
+    localStorage.setItem('pb-demo-config', JSON.stringify({
+      night: night ? { enabled: true, start: '11:00', end: '13:00' } : { enabled: false }, rules: [], shortcuts: [], display: { idleReturnSec: 0 },
+      pages: [{ id: 'p', title: 'Focus', widgets: [{ id: 'pomo', type: 'pomodoro', x: 0, y: 0, w: 6, h: 6, options: { focus: 1, break: 1, sound: true } }] }],
+    }));
+    localStorage.setItem('pomo:p/pomo', JSON.stringify({ phase: 'focus', step: 0, round: 0, endsAt: Date.now() - 60_000, left: 60_000, count: 0, day: new Date().toDateString() }));
+  }, night);
+  await page.goto('/panel/');
+  await expect(page.locator('.w-pomodoro .g-label')).toHaveText('Break'); // the finished step was counted
+}
+
+test('a step that ended while the panel was closed stays silent when the panel opens at night', async ({ page }) => {
+  await openWithExpiredStep(page, true);
+  await expect(page.locator('body')).toHaveClass(/night/);
+  expect(await tones(page)).toEqual([]);
+  expect(await page.evaluate(() => window.__buzz)).toEqual([]);
+});
+
+test('the same step rings once when the panel opens in the day, as before', async ({ page }) => {
+  await openWithExpiredStep(page, false);
+  await expect(page.locator('body')).not.toHaveClass(/night/);
+  expect((await tones(page)).length).toBeGreaterThan(0);
+  expect(await page.evaluate(() => window.__buzz.length)).toBe(1);
+});
