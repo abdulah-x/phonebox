@@ -1,7 +1,8 @@
 import { h, haptic, t, tp } from '../main.js';
 import { W } from '../registry.js';
 
-function parseWidgets(raw) {
+/** The cards a Smart Stack shows: its list parsed, without nested stacks or commands, and without cards turned off. */
+export function parseWidgets(raw) {
   let list = [];
   if (Array.isArray(raw)) {
     list = raw;

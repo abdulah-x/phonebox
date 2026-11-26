@@ -2,6 +2,7 @@ import { $, API, D, LEVEL_COLOR, LOCALE, mediaHtml, METRICS, PANEL_HEADERS, PREV
 import { W } from '../registry.js';
 import { weekStartDay } from './time.js';
 import { invalidateDeckState } from './controls.js';
+import { parseWidgets } from './stack.js';
 
 function bindProcessLink(box, sortTarget) {
   if (!hasProcessesPage()) return;
@@ -1081,17 +1082,24 @@ function lastWeek() {
   const noon = new Date(); noon.setHours(12, 0, 0, 0);
   return Array.from({ length: 7 }, (_, i) => { const d = new Date(noon); d.setDate(noon.getDate() - 6 + i); return d; });
 }
-/** A Focus history widget on any page, on its own or in a Smart Stack. */
+/** A Focus history widget the panel shows: on a page that is on, on its own or as a card of a Smart Stack that is on. */
 function focusHistoryShown() {
-  return (cfg.pages || []).some((p) => (p.widgets || []).some((w) => w.type === 'focushistory'
-    || (w.type === 'stack' && JSON.stringify(w.options || {}).includes('focushistory'))));
+  return (cfg.pages || []).some((p) => p.enabled !== false && (p.widgets || []).some((w) => w.type === 'focushistory'
+    || (w.type === 'stack' && parseWidgets(w.options?.widgets).some((c) => c.type === 'focushistory'))));
 }
-/** Adds a finished focus step to the day it ended, by the phone's clock, and drops the days before the last seven. */
+/** The stored minutes of the last seven days only; days before them are dropped from storage too. */
+function focusWeek() {
+  const keep = new Set(lastWeek().map(dayKey)), old = store.get(FOCUS_KEY, null), hist = {};
+  if (!old || typeof old !== 'object') return hist;
+  for (const [k, v] of Object.entries(old)) if (keep.has(k)) hist[k] = +v || 0;
+  if (Object.keys(hist).length !== Object.keys(old).length) store.set(FOCUS_KEY, hist);
+  return hist;
+}
+/** Adds a finished focus step to the day it ended, by the phone's clock. */
 function addFocusMinutes(endedAt, minutes) {
-  const keep = new Set(lastWeek().map(dayKey)), old = store.get(FOCUS_KEY, {}), hist = {};
-  if (old && typeof old === 'object') for (const [k, v] of Object.entries(old)) if (keep.has(k)) hist[k] = +v || 0;
-  const k = dayKey(new Date(endedAt));
-  if (keep.has(k)) hist[k] = (hist[k] || 0) + minutes;
+  const hist = focusWeek(), k = dayKey(new Date(endedAt));
+  if (!new Set(lastWeek().map(dayKey)).has(k)) return;
+  hist[k] = (hist[k] || 0) + minutes;
   store.set(FOCUS_KEY, hist);
 }
 
@@ -1222,7 +1230,6 @@ W.focushistory = {
     guide.hidden = tip.hidden = true;
     line.setAttribute('role', 'img');
     line.append(plot, guide, tip);
-    days.setAttribute('aria-hidden', 'true'); // the line's label already names every day
     box.append(h('div', 'w-title', h('span', 'fh-name', t('w.focusHistTitle')), total), line, days);
     let shown = '', week = [], mins = [], sel = -1, timer = null;
     const weekday = (d) => new Intl.DateTimeFormat(LOCALE, { weekday: 'short' }).format(d);
@@ -1230,7 +1237,7 @@ W.focushistory = {
     const select = (i) => {
       sel = i;
       guide.hidden = tip.hidden = i < 0;
-      [...days.children].forEach((s, j) => s.classList.toggle('sel', j === i));
+      [...days.children].forEach((s, j) => { s.classList.toggle('sel', j === i); s.setAttribute('aria-pressed', String(j === i)); });
       if (i < 0) return;
       const x = ((i + 0.5) / 7) * 100;
       guide.style.left = `${x}%`;
@@ -1272,10 +1279,17 @@ W.focushistory = {
     };
     line.addEventListener('pointerdown', press);
     days.addEventListener('pointerdown', press);
+    // a keyboard (Enter or Space on a weekday) does what a tap does; a finger's click is handled on pointerdown above
+    days.addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b || e.detail !== 0) return;
+      const i = [...days.children].indexOf(b);
+      if (i === sel) { clearTimeout(timer); select(-1); } else { select(i); release(); }
+    });
     return {
       update() {
         week = lastWeek();
-        const keys = week.map(dayKey), hist = store.get(FOCUS_KEY, {}) || {};
+        const keys = week.map(dayKey), hist = keys[6] === shown.slice(0, 10) ? store.get(FOCUS_KEY, {}) || {} : focusWeek();
         mins = keys.map((k) => Math.round(+hist[k] || 0));
         const sig = keys[6] + '|' + mins.join(',') + '|' + LOCALE;
         if (sig === shown) return;
@@ -1289,7 +1303,12 @@ W.focushistory = {
           + `<path d="M${pts[6][0]} ${pts[6][1]}h0" stroke="currentColor" stroke-width="8" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;
         line.dataset.minutes = mins.join(',');
         line.setAttribute('aria-label', t('w.a.focusWeek', { list: week.map((d, i) => `${weekday(d)} ${mins[i]}`).join(', ') }));
-        days.replaceChildren(...week.map((d, i) => h('span', i === 6 ? 'today' : null, weekday(d))));
+        days.replaceChildren(...week.map((d, i) => {
+          const b = h('button', i === 6 ? 'today' : null, weekday(d));
+          b.type = 'button';
+          b.setAttribute('aria-label', `${weekday(d)} · ${t('w.focusMin', { n: mins[i] })}`);
+          return b;
+        }));
         total.textContent = t('w.focusMin', { n: mins.reduce((a, b) => a + b, 0) });
         select(sel); // a marked day keeps its mark, with the new minutes
       },
