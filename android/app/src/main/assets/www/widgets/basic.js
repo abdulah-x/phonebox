@@ -1071,6 +1071,30 @@ export function parsePomodoro(text) {
   return { steps: steps.length ? steps : null, bad: null };
 }
 
+// ---------------------------------------------------------------- focus history (#350)
+// Finished Pomodoro focus minutes per local day, shared by every timer on the panel and shown by the Focus history
+// widget. Kept only while that widget is on the panel, and only for the last seven days.
+const FOCUS_KEY = 'focus-history';
+const dayKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+/** The last seven days, oldest first, today last (at noon, so a daylight-saving change can't skip or repeat a day). */
+function lastWeek() {
+  const noon = new Date(); noon.setHours(12, 0, 0, 0);
+  return Array.from({ length: 7 }, (_, i) => { const d = new Date(noon); d.setDate(noon.getDate() - 6 + i); return d; });
+}
+/** A Focus history widget on any page, on its own or in a Smart Stack. */
+function focusHistoryShown() {
+  return (cfg.pages || []).some((p) => (p.widgets || []).some((w) => w.type === 'focushistory'
+    || (w.type === 'stack' && JSON.stringify(w.options || {}).includes('focushistory'))));
+}
+/** Adds a finished focus step to the day it ended, by the phone's clock, and drops the days before the last seven. */
+function addFocusMinutes(endedAt, minutes) {
+  const keep = new Set(lastWeek().map(dayKey)), old = store.get(FOCUS_KEY, {}), hist = {};
+  if (old && typeof old === 'object') for (const [k, v] of Object.entries(old)) if (keep.has(k)) hist[k] = +v || 0;
+  const k = dayKey(new Date(endedAt));
+  if (keep.has(k)) hist[k] = (hist[k] || 0) + minutes;
+  store.set(FOCUS_KEY, hist);
+}
+
 W.pomodoro = {
   needs: ['tick'],
   always: true, // the alarm goes off on whatever page is showing
@@ -1116,7 +1140,12 @@ W.pomodoro = {
     const remaining = () => (st.endsAt ? Math.max(0, st.endsAt - Date.now()) : st.left);
     /** Moves to the next step; returns true when the last round of the sequence is over (the timer then stops). */
     const advance = (manual) => {
-      if (plan[st.step].kind === 'focus' && !manual) st.count++;
+      if (plan[st.step].kind === 'focus' && !manual) {
+        st.count++;
+        // for the Focus history widget: the day the step ended, so one across midnight, or one that ended while the panel
+        // was closed, counts on the day it finished
+        if (focusHistoryShown()) addFocusMinutes(st.endsAt || Date.now(), plan[st.step].ms / 60_000);
+      }
       st.step++;
       if (st.step >= plan.length) { st.step = 0; st.round = (st.round || 0) + 1; }
       st.left = total();
@@ -1182,6 +1211,89 @@ W.pomodoro = {
     });
     skip.addEventListener('click', () => { haptic(); advance(true); render(); });
     return { update: render };
+  },
+};
+
+W.focushistory = {
+  needs: ['tick'],
+  create(box) {
+    const total = h('span', 'fh-total'), line = h('div', 'fh-line'), plot = h('div', 'fh-plot'), days = h('div', 'fh-days');
+    const guide = h('div', 'fh-guide'), tip = h('div', 'fh-tip');
+    guide.hidden = tip.hidden = true;
+    line.setAttribute('role', 'img');
+    line.append(plot, guide, tip);
+    days.setAttribute('aria-hidden', 'true'); // the line's label already names every day
+    box.append(h('div', 'w-title', h('span', 'fh-name', t('w.focusHistTitle')), total), line, days);
+    let shown = '', week = [], mins = [], sel = -1, timer = null;
+    const weekday = (d) => new Intl.DateTimeFormat(LOCALE, { weekday: 'short' }).format(d);
+    /** Marks one day with a line through its point and its minutes on top; -1 clears the mark. */
+    const select = (i) => {
+      sel = i;
+      guide.hidden = tip.hidden = i < 0;
+      [...days.children].forEach((s, j) => s.classList.toggle('sel', j === i));
+      if (i < 0) return;
+      const x = ((i + 0.5) / 7) * 100;
+      guide.style.left = `${x}%`;
+      tip.style.left = `clamp(48px, ${x}%, calc(100% - 48px))`; // the label stays inside the card at either end
+      tip.textContent = `${weekday(week[i])} · ${t('w.focusMin', { n: mins[i] })}`;
+    };
+    // a tap or a hold on the line or a weekday shows that day; a hold keeps it while the finger stays, and it clears a
+    // moment after the finger lifts. A second tap on the same day closes it. A finger that moves is a swipe: nothing is
+    // marked and nothing is prevented, so the page still turns.
+    let down = null, holdTimer = null;
+    const release = () => { clearTimeout(timer); timer = setTimeout(() => select(-1), 4000); };
+    const end = (e) => {
+      if (!down) return;
+      const p = down;
+      down = null;
+      clearTimeout(holdTimer);
+      document.removeEventListener('pointermove', move);
+      if (e.type === 'pointercancel') { if (p.held) select(-1); return; } // the browser took the touch for a swipe
+      if (!p.held) { if (p.i === sel) { clearTimeout(timer); select(-1); return; } haptic(); select(p.i); }
+      release();
+    };
+    const move = (e) => {
+      if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 10) {
+        if (down.held) select(-1);
+        down = null;
+        clearTimeout(holdTimer);
+        document.removeEventListener('pointermove', move);
+      }
+    };
+    const press = (e) => {
+      const r = line.getBoundingClientRect();
+      const i = Math.min(6, Math.max(0, Math.floor(((e.clientX - r.left) / r.width) * 7)));
+      down = { x: e.clientX, y: e.clientY, i, held: false };
+      clearTimeout(holdTimer);
+      holdTimer = setTimeout(() => { if (down) { down.held = true; clearTimeout(timer); haptic(); select(i); } }, 250);
+      document.addEventListener('pointermove', move);
+      document.addEventListener('pointerup', end, { once: true });
+      document.addEventListener('pointercancel', end, { once: true });
+    };
+    line.addEventListener('pointerdown', press);
+    days.addEventListener('pointerdown', press);
+    return {
+      update() {
+        week = lastWeek();
+        const keys = week.map(dayKey), hist = store.get(FOCUS_KEY, {}) || {};
+        mins = keys.map((k) => Math.round(+hist[k] || 0));
+        const sig = keys[6] + '|' + mins.join(',') + '|' + LOCALE;
+        if (sig === shown) return;
+        shown = sig;
+        // 0 at the bottom, so a quiet week stays low; each point sits above its weekday, today last with a dot
+        const max = Math.max(...mins, 1);
+        const pts = mins.map((m, i) => [r1(((i + 0.5) / 7) * 100), r1(37 - (m / max) * 34)]);
+        // numbers only, as with ringSvg; vector-effect keeps the line and the dot round when the box is stretched
+        plot.innerHTML = '<svg viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">'
+          + `<polyline points="${pts.map((p) => p.join(',')).join(' ')}" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`
+          + `<path d="M${pts[6][0]} ${pts[6][1]}h0" stroke="currentColor" stroke-width="8" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;
+        line.dataset.minutes = mins.join(',');
+        line.setAttribute('aria-label', t('w.a.focusWeek', { list: week.map((d, i) => `${weekday(d)} ${mins[i]}`).join(', ') }));
+        days.replaceChildren(...week.map((d, i) => h('span', i === 6 ? 'today' : null, weekday(d))));
+        total.textContent = t('w.focusMin', { n: mins.reduce((a, b) => a + b, 0) });
+        select(sel); // a marked day keeps its mark, with the new minutes
+      },
+    };
   },
 };
 

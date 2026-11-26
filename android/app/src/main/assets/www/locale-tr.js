@@ -868,6 +868,8 @@ window.PhoneBoxLocaleData = Object.assign(window.PhoneBoxLocaleData || {}, {
       "Pinned player (blank = Media sources selection)": "Bağlanmış oynatıcı (boş = Medya kaynakları seçimi)",
       "Planner": "Planlayıcı",
       "Play a sound when a step ends": "Bir adım bittiğinde bir ses çal",
+      "Focus history": "Odak geçmişi",
+      "Finished Pomodoro focus minutes per day over the last seven days.": "Son yedi günde her gün tamamlanan Pomodoro odak dakikaları.",
       "Play configured local sounds through a selected device.": "Seçilen aygıt üzerinden yapılandırılmış yerel sesleri çal.",
       "Play configured radio streams on the computer.": "Bilgisayarda yapılandırılmış radyo akışları oynat.",
       "Playback position": "Oynatma konumları",

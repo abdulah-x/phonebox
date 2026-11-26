@@ -817,6 +817,21 @@ html.beat-3 .sess.busy .st, html.beat-4 .sess.shell .st, html.beat-2 .sess.waiti
 .pb:active { transform: scale(.9); }
 @container (max-height: 160px) { .w-pomodoro .g-sub { display: none; } }
 
+/* ---------- focus history (#350) ---------- */
+.w-focushistory { --q: #ef4444; display: flex; flex-direction: column; gap: 6px; padding: 12px 14px 10px; }
+.w-focushistory .fh-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.w-focushistory .fh-total { flex-shrink: 0; margin-left: auto; color: var(--text); letter-spacing: 0; text-transform: none; font-weight: 600; }
+.fh-line { position: relative; flex: 1; min-height: 0; color: var(--q); cursor: pointer; }
+.fh-plot { position: absolute; inset: 0; }
+.fh-line svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.fh-guide { position: absolute; top: 0; bottom: -4px; width: 1px; background: var(--muted); opacity: .7; pointer-events: none; }
+.fh-tip { position: absolute; top: 0; transform: translateX(-50%); padding: 2px 8px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line); color: var(--text); font-size: 12px; font-weight: 600; white-space: nowrap; pointer-events: none; }
+.fh-days .sel { color: var(--text); font-weight: 700; }
+.fh-days { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 11px; color: var(--muted); cursor: pointer; }
+.fh-days .today { color: var(--q); font-weight: 700; }
+@container (max-height: 90px) { .w-focushistory .fh-days { display: none; } }
+@container (max-width: 260px) { .w-focushistory .fh-days { font-size: 9px; } .w-focushistory .w-title { letter-spacing: .06em; } }
+
 /* ---------- countdown ---------- */
 .w-countdown { padding: 8px 12px; display: flex; flex-direction: column; justify-content: center; }
 .cd-l { font-size: clamp(10px, 11cqh, 14px); color: var(--muted); letter-spacing: .1em; text-transform: uppercase; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
