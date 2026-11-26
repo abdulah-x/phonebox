@@ -7,16 +7,16 @@ const MIN = 60_000;
 const NOON = new Date(2026, 0, 15, 12, 0, 0);
 
 /** The Focus template's layout with Focus history in place of the note: a timer, and the history beside it. */
-async function show(page, { history = true, inStack = false, options = { focus: 1, break: 1 }, state = null, hist = null, at = NOON, language = 'en', stackCards = null, pageOn = true } = {}) {
+async function show(page, { history = true, inStack = false, options = { focus: 1, break: 1 }, state = null, hist = null, at = NOON, language = 'en', stackCards = null, pageOn = true, fhH = 4 } = {}) {
   await page.clock.install({ time: at });
   await page.goto('/panel/style.css');
-  await page.evaluate(({ history, inStack, options, state, hist, language, stackCards, pageOn }) => {
+  await page.evaluate(({ history, inStack, options, state, hist, language, stackCards, pageOn, fhH }) => {
     localStorage.clear();
     const widgets = [{ id: 'pomo', type: 'pomodoro', x: 0, y: 0, w: 5, h: 6, options }];
     if (history) {
       widgets.push(inStack
         ? { id: 'st', type: 'stack', x: 5, y: 0, w: 7, h: 4, options: { widgets: stackCards || [{ type: 'clock', enabled: true }, { type: 'focushistory', enabled: true }] } }
-        : { id: 'fh', type: 'focushistory', x: 5, y: 0, w: 7, h: 4 });
+        : { id: 'fh', type: 'focushistory', x: 5, y: 0, w: 7, h: fhH });
     }
     localStorage.setItem('pb-demo-config', JSON.stringify({
       night: { enabled: false }, rules: [], shortcuts: [], display: { idleReturnSec: 0, language },
@@ -26,7 +26,7 @@ async function show(page, { history = true, inStack = false, options = { focus: 
     }));
     if (state) localStorage.setItem('pomo:p/pomo', JSON.stringify({ ...state, endsAt: state.endsAt && Date.now() + state.endsAt, day: new Date().toDateString() }));
     if (hist) localStorage.setItem('focus-history', JSON.stringify(hist));
-  }, { history, inStack, options, state, hist, language, stackCards, pageOn });
+  }, { history, inStack, options, state, hist, language, stackCards, pageOn, fhH });
   await page.goto('/panel/');
   const pomo = page.locator('.w-pomodoro');
   await expect(pomo).toBeVisible();
@@ -255,4 +255,23 @@ test('in Arabic the weekdays stay under their points, oldest on the left, and a 
   const guide = await p.fh.locator('.fh-guide').boundingBox();
   expect(guide.x).toBeGreaterThan(first.x);
   expect(guide.x).toBeLessThan(first.x + first.width);
+});
+
+test('on a short widget the weekdays are out of sight and out of the way, but a keyboard can still pick a day', async ({ page }) => {
+  await page.setViewportSize({ width: 640, height: 300 }); // a smaller landscape phone, where two rows are a short widget
+  const p = await show(page, { fhH: 2, hist: { '2026-01-14': 125 } });
+  expect((await p.fh.boundingBox()).height).toBeLessThanOrEqual(90);
+  const days = p.fh.locator('.fh-days'), wed = days.locator('button').nth(5), tip = p.fh.locator('.fh-tip');
+  await expect(days).toHaveCSS('opacity', '0');
+  await expect(days).toHaveCSS('pointer-events', 'none');
+  // a tap on the chart still reaches the line, not the hidden row
+  const box = await p.line.boundingBox();
+  await page.mouse.click(box.x + box.width * (5.5 / 7), box.y + box.height - 3);
+  await expect(tip).toHaveText('Wed · 125 min');
+  await page.mouse.click(box.x + box.width * (5.5 / 7), box.y + box.height - 3);
+  await expect(tip).toBeHidden();
+  await wed.focus();
+  await expect(days).toHaveCSS('opacity', '1');
+  await page.keyboard.press('Enter');
+  await expect(tip).toHaveText('Wed · 125 min');
 });
