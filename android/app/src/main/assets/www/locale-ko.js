@@ -572,7 +572,7 @@ window.PhoneBoxLocaleData = Object.assign(window.PhoneBoxLocaleData || {}, {
       "s.quotas.codexLiveHint": "페이지가 Codex 할당량을 보여주는 동안 몇 분마다 백그라운드에서 codex를 실행합니다(기본적으로 꺼짐). Codex CLI는 자체로 로그인을 관리하고 새로 고칠 수 있습니다.",
       "s.quotas.lead": "패널에서 추적 및 표시할 AI 코딩 서비스를 선택하고 회전을 구성합니다.",
       "s.quotas.tracked": "추적 AI 서비스",
-      "s.quotas.sharedHint": "시계와 AI 할당량 위젯은 자체 제공자 목록이 없으면 이 목록을 따릅니다. 할당량 링 선택지는 이것들(및 Cursor)만 제공하며, 링은 이미 표시 중인 제공자를 유지합니다.",
+      "s.quotas.sharedHint": "시계, AI 할당량, CodexBar 위젯은 자체 제공자 목록이 없으면 이 목록을 따릅니다. 할당량 링 선택지는 이것들(및 Cursor)만 제공하며, 링은 이미 표시 중인 제공자를 유지합니다.",
       "s.w.followProviders": "내 AI 서비스 따르기",
       "s.w.followProvidersHint": "설정의 ‘추적 AI 서비스’에서 선택한 서비스를 표시합니다. 이 위젯만 따로 고르려면 선택을 해제하세요.",
       "s.quotas.rotate": "제공자 자동으로 돌리기",

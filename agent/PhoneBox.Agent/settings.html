@@ -951,7 +951,7 @@ nav a.on::before { color: var(--accent); }
             <label class="check"><input type="checkbox" id="cb_antigravity"> Antigravity</label>
             <label class="check"><input type="checkbox" id="cb_grok"> Grok</label>
           </div>
-          <span class="hint" data-i18n="s.quotas.sharedHint">Clock and AI quotas widgets follow this list unless a widget has its own Providers list. The Quota ring picker offers only these (plus Cursor), and a ring keeps the provider it already shows.</span>
+          <span class="hint" data-i18n="s.quotas.sharedHint">Clock, AI quotas and CodexBar widgets follow this list unless a widget has its own Providers list. The Quota ring picker offers only these (plus Cursor), and a ring keeps the provider it already shows.</span>
           <span class="hint" data-i18n="s.quotas.grokHint">Grok uses the Grok CLI sign-in on this computer (grok login). PhoneBox reads that token without refreshing it, and asks Grok only while an enabled page shows Grok quotas.</span>
         </div>
         <div class="field" style="margin-top:10px">
@@ -1405,7 +1405,7 @@ function deckCols() {
 const FOLLOWS_SHARED = new Set(['clock', 'quotas', 'codexbar']);
 const ALL_PROVIDERS = ['claude', 'codex', 'antigravity', 'grok'];
 const sharedProviders = () => Array.isArray(cfg.codexBar?.providers) ? cfg.codexBar.providers : ALL_PROVIDERS;
-const followsShared = (w) => FOLLOWS_SHARED.has(w.type) && !(w.options && 'providers' in w.options);
+const followsShared = (w) => FOLLOWS_SHARED.has(w.type) && !Array.isArray(w.options?.providers);
 function optVal(w, o) {
   if (o.key === 'providers' && followsShared(w)) return sharedProviders();
   const value = w.options && o.key in w.options ? w.options[o.key] : o.default;

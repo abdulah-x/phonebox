@@ -922,6 +922,18 @@ public class SharedProvidersConfigTests
     }
 
     [Theory]
+    [InlineData("""["claude","bogus","grok"]""", new[] { "claude", "grok" })] // unknown ids are dropped
+    [InlineData("""["codex","codex","claude","codex"]""", new[] { "codex", "claude" })] // duplicates are removed
+    [InlineData("null", new string[0])] // null becomes an empty list
+    [InlineData("[]", new string[0])] // an empty list stays empty
+    [InlineData("""["Claude","GROK"]""", new string[0])] // ids are matched exactly, as the checkboxes save them
+    public void SharedListIsNormalized(string providers, string[] expected)
+    {
+        var cfg = SavedConfig($$$"""{"codexBar":{"providers":{{{providers}}}}}""");
+        Assert.Equal(expected, cfg.CodexBar.Providers);
+    }
+
+    [Theory]
     // a widget without its own list follows the shared one
     [InlineData("""{"type":"clock","options":{"status":true}}""", """["claude"]""", false)]
     [InlineData("""{"type":"clock","options":{"status":true}}""", """["claude","grok"]""", true)]

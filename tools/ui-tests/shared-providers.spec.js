@@ -140,6 +140,14 @@ test('a widget saved with its own list keeps it: Follow is off', async ({ page }
   await expect(probe.getByRole('checkbox', { name: 'Codex' })).toBeChecked();
 });
 
+test('a hand-edited "providers": null follows the shared list, as on the phone', async ({ page }) => {
+  await editor(page, ['claude']);
+  const probe = await inspect(page, { type: 'clock', options: { providers: null } }, 'providers');
+  await expect(probe.getByRole('checkbox', { name: 'Follow my AI providers' })).toBeChecked();
+  await expect(probe.getByRole('checkbox', { name: 'Claude' })).toBeChecked();
+  await expect(probe.getByRole('checkbox', { name: 'Codex' })).not.toBeChecked();
+});
+
 test('the Quota ring offers only the providers that are on, plus Cursor and its own choice', async ({ page }) => {
   await editor(page, ['claude']);
   await page.evaluate(() => { // the demo answers /api/quotas inside the page
