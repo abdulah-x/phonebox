@@ -899,3 +899,44 @@ public class PageBarConfigTests
         }
     }
 }
+
+/// <summary>The shared "Tracked AI services" list (#351) that widgets without their own Providers list follow.</summary>
+public class SharedProvidersConfigTests
+{
+    /// <summary>Saves <paramref name="json"/> through a fresh store and returns what it keeps.</summary>
+    private static AgentConfig SavedConfig(string json)
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"phonebox-providers-{Guid.NewGuid():N}.json");
+        try
+        {
+            File.WriteAllText(path, "{}");
+            var store = new ConfigStore(path);
+            Assert.Null(store.Save(json));
+            return store.Get();
+        }
+        finally
+        {
+            File.Delete(path);
+            File.Delete(path + ".bak");
+        }
+    }
+
+    [Theory]
+    // a widget without its own list follows the shared one
+    [InlineData("""{"type":"clock","options":{"status":true}}""", """["claude"]""", false)]
+    [InlineData("""{"type":"clock","options":{"status":true}}""", """["claude","grok"]""", true)]
+    [InlineData("""{"type":"quotas","options":{}}""", """["claude"]""", false)]
+    [InlineData("""{"type":"quotas","options":{}}""", """["grok"]""", true)]
+    // its own list wins
+    [InlineData("""{"type":"clock","options":{"status":true,"providers":["grok"]}}""", """["claude"]""", true)]
+    [InlineData("""{"type":"quotas","options":{"providers":["claude"]}}""", """["grok"]""", false)]
+    // a Smart Stack card follows the same way
+    [InlineData("""{"type":"stack","options":{"widgets":[{"type":"quotas","enabled":true}]}}""", """["claude"]""", false)]
+    [InlineData("""{"type":"stack","options":{"widgets":[{"type":"quotas","enabled":true}]}}""", """["grok"]""", true)]
+    public void WidgetWithoutProvidersFollowsSharedListForGrok(string widget, string shared, bool grok)
+    {
+        var c = SavedConfig($$"""{"codexBar":{"providers":{{shared}}},"pages":[{"id":"p","title":"P","enabled":true,"widgets":[{{widget.Insert(1, "\"id\":\"w\",\"x\":0,\"y\":0,\"w\":6,\"h\":4,")}}]}]}""");
+        Assert.Equal(grok, c.ShowGrokQuota());
+    }
+}
+
