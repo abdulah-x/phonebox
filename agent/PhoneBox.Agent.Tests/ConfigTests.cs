@@ -938,5 +938,16 @@ public class SharedProvidersConfigTests
         var c = SavedConfig($$"""{"codexBar":{"providers":{{shared}}},"pages":[{"id":"p","title":"P","enabled":true,"widgets":[{{widget.Insert(1, "\"id\":\"w\",\"x\":0,\"y\":0,\"w\":6,\"h\":4,")}}]}]}""");
         Assert.Equal(grok, c.ShowGrokQuota());
     }
-}
 
+    [Theory]
+    [InlineData("ai")]
+    [InlineData("codexbar")]
+    public void TemplatePagesFollowTheSharedList(string template)
+    {
+        // a page made from a template keeps no Providers list, so its quotas widget follows the shared one
+        var c = SavedConfig($$"""{"codexBar":{"providers":["claude"]},"pages":[{"template":"{{template}}"}]}""");
+        var quotas = Assert.Single(c.Pages[0].Widgets!, w => w.Type == "quotas");
+        Assert.Null(quotas.Opt("providers"));
+        Assert.False(c.ShowGrokQuota());
+    }
+}

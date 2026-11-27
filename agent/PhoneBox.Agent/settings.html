@@ -951,6 +951,7 @@ nav a.on::before { color: var(--accent); }
             <label class="check"><input type="checkbox" id="cb_antigravity"> Antigravity</label>
             <label class="check"><input type="checkbox" id="cb_grok"> Grok</label>
           </div>
+          <span class="hint" data-i18n="s.quotas.sharedHint">Clock, AI quotas and Quota ring widgets follow this list unless a widget has its own Providers list.</span>
           <span class="hint" data-i18n="s.quotas.grokHint">Grok uses the Grok CLI sign-in on this computer (grok login). PhoneBox reads that token without refreshing it, and asks Grok only while an enabled page shows Grok quotas.</span>
         </div>
         <div class="field" style="margin-top:10px">
@@ -1399,7 +1400,14 @@ function deckCols() {
   return 4;
 }
 
+// A Clock or AI quotas widget without a Providers list of its own follows the shared one in AI quotas › Tracked AI
+// services (#351): new widgets and templates are saved without one, and the panel and the agent read it the same way.
+const FOLLOWS_SHARED = new Set(['clock', 'quotas', 'codexbar']);
+const ALL_PROVIDERS = ['claude', 'codex', 'antigravity', 'grok'];
+const sharedProviders = () => Array.isArray(cfg.codexBar?.providers) ? cfg.codexBar.providers : ALL_PROVIDERS;
+const followsShared = (w) => FOLLOWS_SHARED.has(w.type) && !(w.options && 'providers' in w.options);
 function optVal(w, o) {
+  if (o.key === 'providers' && followsShared(w)) return sharedProviders();
   const value = w.options && o.key in w.options ? w.options[o.key] : o.default;
   // The previous Clock alignment value is an alias for the logical start.
   return w.type === 'clock' && o.key === 'align' && value === 'left' ? 'start' : value;
@@ -1420,7 +1428,10 @@ function optionLabel(w, d, o) {
 /** The catalog's defaults for a widget type, written out so the panel and the agent see what the inspector shows. */
 function defaultOptions(type) {
   const options = {};
-  for (const o of widgetDef(type)?.options || []) options[o.key] = Array.isArray(o.default) ? [...o.default] : o.default;
+  for (const o of widgetDef(type)?.options || []) {
+    if (o.key === 'providers' && FOLLOWS_SHARED.has(type)) continue; // follows the shared list until the widget picks its own
+    options[o.key] = Array.isArray(o.default) ? [...o.default] : o.default;
+  }
   return options;
 }
 function setWOpt(w, key, val) { w.options = { ...(w.options || {}), [key]: val }; changed(); renderCanvas(); }
@@ -2095,7 +2106,11 @@ function optionField(w, o, onValChange) {
         if (selected && !seen.has(selected)) list.push([selected, selected]);
         select.replaceChildren(...list.map(([k, l]) => h('option', { value: k, selected: k === selected }, l)));
       };
-      fill([...(o.choices || [])]);
+      // Quota ring: the four shared providers that are switched off in AI quotas are left out (#351); others such as
+      // Cursor stay, and fill() keeps the ring's current choice.
+      const ringOn = (choices) => o.key === 'provider' && w.type === 'quotaring'
+        ? choices.filter(([k]) => { const base = String(k).split('@')[0]; return k === optVal(w, o) || !ALL_PROVIDERS.includes(base) || sharedProviders().includes(base); }) : choices;
+      fill(ringOn([...(o.choices || [])]));
       // Quota ring: offer every provider CodexBar / local quotas currently report.
       if (o.key === 'provider' && w.type === 'quotaring') {
         fetch('/api/quotas').then((r) => r.ok ? r.json() : null).then((data) => {
@@ -2107,7 +2122,7 @@ function optionField(w, o, onValChange) {
               merged.push([p.id, p.name || p.id]);
             }
           }
-          fill(merged);
+          fill(ringOn(merged));
         }).catch(() => {});
       }
       return field(select);
@@ -2116,11 +2131,13 @@ function optionField(w, o, onValChange) {
       // read the stored value on every change: the inspector is not rebuilt between two ticks
       const cur = () => { const x = optVal(w, o); return Array.isArray(x) ? x : []; };
       const optsBox = h('div', { class: 'opts' });
+      const canFollow = o.key === 'providers' && FOLLOWS_SHARED.has(w.type);
+      const following = () => canFollow && followsShared(w);
       let currentChoices = [...(o.choices || [])];
       const renderChoices = (choices) => {
         currentChoices = choices;
         const selected = cur();
-        optsBox.replaceChildren(...choices.map(([k, l]) => h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: selected.includes(k), onchange: (e) => {
+        optsBox.replaceChildren(...choices.map(([k, l]) => h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: selected.includes(k), disabled: following(), onchange: (e) => {
           const picked = new Set(cur());
           if (e.target.checked) picked.add(k); else picked.delete(k);
           const knownOrder = currentChoices.map((c) => c[0]).filter((x) => picked.has(x));
@@ -2150,6 +2167,20 @@ function optionField(w, o, onValChange) {
           }
           renderChoices(withSaved(merged));
         }).catch(() => {});
+      }
+      if (canFollow) {
+        // ticked: the widget has no list and shows what AI quotas › Tracked AI services lists; unticked: its own list,
+        // starting from the shared one, which the boxes below then edit
+        const follow = h('input', { type: 'checkbox', checked: following(), onchange: (e) => {
+          if (e.target.checked) {
+            const { providers: _, ...rest } = w.options || {};
+            w.options = rest;
+            if (onValChange) onValChange(o.key, undefined); else { changed(); renderCanvas(); }
+          } else set(o.key, [...sharedProviders()]);
+          renderChoices(withSaved(currentChoices));
+        } });
+        return field(h('label', { class: 'check', style: { marginBottom: '6px' } }, follow, h('span', {}, t('s.w.followProviders'))),
+          optsBox, h('span', { class: 'hint' }, t('s.w.followProvidersHint')));
       }
       return field(optsBox);
     }

@@ -767,6 +767,15 @@ export function phoneBattery() {
 export function quotaProviders() { return D.quotas?.providers || []; }
 // An extra account's card is `claude@<label>`: a widget set to `claude` shows every Claude account, or it names one.
 export const quotaWanted = (want, id) => want.includes(id) || want.includes(String(id).split('@')[0]);
+export const ALL_PROVIDERS = ['claude', 'codex', 'antigravity', 'grok'];
+/**
+ * The providers a widget shows (#351): its own Providers list, or else the shared one in Settings › AI quotas ("Tracked
+ * AI services"), which is all four by default. A widget without a list (new ones, and templates) follows the shared one.
+ */
+export function providersFor(o = {}) {
+  if (Array.isArray(o.providers)) return o.providers;
+  return Array.isArray(cfg.codexBar?.providers) ? cfg.codexBar.providers : ALL_PROVIDERS;
+}
 
 export function renderStatus(el, o = {}) {
   const via = transport();
@@ -776,8 +785,7 @@ export function renderStatus(el, o = {}) {
   if (bat) kids.push(h('span', 'sep', '·'), h('span', null, bat));
   for (const p of quotaProviders()) {
     const l = p.limits?.[0];
-    // Clocks saved before the Providers option have none: show every provider like before.
-    if (!l || (o.providers != null && !quotaWanted(o.providers, p.id))) continue;
+    if (!l || !quotaWanted(providersFor(o), p.id)) continue;
     const s = h('span', 'qm', h('span', 'sep', '·'), p.name + ' ', h('b', null, Math.round(l.percent) + '%'));
     if (l.percent >= 95) s.style.color = '#f87171'; else if (l.percent >= 80) s.style.color = '#fbbf24';
     kids.push(s);
