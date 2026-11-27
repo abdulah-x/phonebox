@@ -572,7 +572,7 @@ window.PhoneBoxLocaleData = Object.assign(window.PhoneBoxLocaleData || {}, {
       "s.quotas.codexLiveHint": "Jalankan codex di latar belakang setiap beberapa menit saat halaman menampilkan quota Codex (tidak aktif secara default). CLI Codex mengelola loginnya sendiri dan mungkin memperbaruinya.",
       "s.quotas.lead": "Pilih layanan AI coding mana yang akan diikuti dan ditampilkan pada panel, dan konfigur rotasi.",
       "s.quotas.tracked": "Layanan AI yang dilacak",
-      "s.quotas.sharedHint": "Widget Jam, Kuota AI, dan Cincin kuota mengikuti daftar ini, kecuali widget punya daftar penyedia sendiri.",
+      "s.quotas.sharedHint": "Widget Jam dan Kuota AI mengikuti daftar ini, kecuali widget punya daftar penyedia sendiri. Pilihan Cincin kuota hanya menawarkan ini (ditambah Cursor), dan cincin tetap memakai penyedia yang sudah ditampilkannya.",
       "s.w.followProviders": "Ikuti penyedia AI saya",
       "s.w.followProvidersHint": "Menampilkan layanan yang dicentang di “Layanan AI yang dilacak” pada Pengaturan. Hapus centang untuk memilih sendiri bagi widget ini.",
       "s.quotas.rotate": "Putar provider secara otomatis",

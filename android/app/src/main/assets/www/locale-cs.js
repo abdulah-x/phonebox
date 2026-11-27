@@ -572,7 +572,7 @@ window.PhoneBoxLocaleData = Object.assign(window.PhoneBoxLocaleData || {}, {
       "s.quotas.codexLiveHint": "Spustí codex na pozadí každých pár minut, zatímco stránka zobrazuje Codex kvóty (standardně vypnuto).CLI Codex spravuje své vlastní přihlášení a může jej obnovit.",
       "s.quotas.lead": "Zvolte, které služby kódování umělé inteligence chcete sledovat a zobrazit na panelu, a nakonfigurujte rotaci.",
       "s.quotas.tracked": "Sledované AI služby",
-      "s.quotas.sharedHint": "Widgety Hodiny, AI kvóty a Prstenec kvóty se řídí tímto seznamem, pokud widget nemá vlastní seznam poskytovatelů.",
+      "s.quotas.sharedHint": "Widgety Hodiny a AI kvóty se řídí tímto seznamem, pokud widget nemá vlastní seznam poskytovatelů. Výběr Prstence kvóty nabízí jen tyto (a Cursor) a prstenec si ponechá poskytovatele, kterého už zobrazuje.",
       "s.w.followProviders": "Podle mých AI služeb",
       "s.w.followProvidersHint": "Zobrazí služby zaškrtnuté v „Sledované AI služby“ v nastavení. Zrušte zaškrtnutí a vyberte vlastní pro tento widget.",
       "s.quotas.rotate": "Automaticky rotujte poskytovatele",

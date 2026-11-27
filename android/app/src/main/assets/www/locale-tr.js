@@ -74,7 +74,7 @@ window.PhoneBoxLocaleData = Object.assign(window.PhoneBoxLocaleData || {}, {
       "s.claude.timeout": "Terminalin devreye girmesinden önce cevap vermek için saniyeler",
       "s.quotas.lead": "Panelde izlenecek ve gösterilecek hangi AI kodlama hizmetlerini seç, ve dönüşü ayarla.",
       "s.quotas.tracked": "Yapay zeka hizmetleri izlendi",
-      "s.quotas.sharedHint": "Saat, Yapay zeka kotaları ve Kota halkası widget'ları, kendi sağlayıcı listesi olmadıkça bu listeyi izler.",
+      "s.quotas.sharedHint": "Saat ve Yapay zeka kotaları widget'ları, kendi sağlayıcı listesi olmadıkça bu listeyi izler. Kota halkası seçicisi yalnızca bunları (ve Cursor'u) sunar; bir halka zaten gösterdiği sağlayıcıyı korur.",
       "s.w.followProviders": "Yapay zeka sağlayıcılarımı izle",
       "s.w.followProvidersHint": "Ayarlar'da “Yapay zeka hizmetleri izlendi” altında işaretli hizmetleri gösterir. Bu widget için ayrı seçmek üzere işareti kaldırın.",
       "s.quotas.rotate": "Sağlayıcıları otomatik olarak döndür",

@@ -572,7 +572,7 @@ window.PhoneBoxLocaleData = Object.assign(window.PhoneBoxLocaleData || {}, {
       "s.quotas.codexLiveHint": "ページが Codex クオタを表示している間、数分ごとにバックグラウンドで codex を実行します。デフォルトではオフです。 Codex CLI はログインを管理し、更新することもできます。",
       "s.quotas.lead": "追跡するAI符号化サービスを選択し、パネルに表示し、回転を設定します。",
       "s.quotas.tracked": "追跡型AIサービス",
-      "s.quotas.sharedHint": "時計、AI クォータ、クォータリングのウィジェットは、独自のプロバイダー一覧がない限りこの一覧に従います。",
+      "s.quotas.sharedHint": "時計と AI クォータのウィジェットは、独自のプロバイダー一覧がない限りこの一覧に従います。クォータリングの選択肢はこれら（と Cursor）だけで、既存のリングは表示中のプロバイダーを保ちます。",
       "s.w.followProviders": "使っている AI サービスに合わせる",
       "s.w.followProvidersHint": "設定の「追跡型AIサービス」でチェックしたサービスを表示します。チェックを外すと、このウィジェット専用に選べます。",
       "s.quotas.rotate": "プロバイダを自動的に回転",

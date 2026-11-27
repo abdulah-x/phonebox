@@ -572,7 +572,7 @@ window.PhoneBoxLocaleData = Object.assign(window.PhoneBoxLocaleData || {}, {
       "s.quotas.codexLiveHint": "當頁面顯示 Codex 配額時每隔幾分鐘在背景執行 codex（預設關閉）。Codex CLI 自行管理登入狀態並可能重新整理它。",
       "s.quotas.lead": "選擇要跟蹤和顯示在面板上的 AI 編碼服務,並配置旋轉。",
       "s.quotas.tracked": "追蹤人工智慧服務",
-      "s.quotas.sharedHint": "時鐘、AI 配額和配額環小工具會跟隨此清單，除非小工具有自己的提供者清單。",
+      "s.quotas.sharedHint": "時鐘和 AI 配額小工具會跟隨此清單，除非小工具有自己的提供者清單。配額環的選擇只提供這些（以及 Cursor），已有的配額環保留目前顯示的提供者。",
       "s.w.followProviders": "跟隨我的 AI 服務",
       "s.w.followProvidersHint": "顯示設定中「追蹤人工智慧服務」裡勾選的服務。取消勾選可為此小工具單獨選擇。",
       "s.quotas.rotate": "自動轉換提供者",

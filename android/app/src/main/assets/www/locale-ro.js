@@ -572,7 +572,7 @@ window.PhoneBoxLocaleData = Object.assign(window.PhoneBoxLocaleData || {}, {
       "s.quotas.codexLiveHint": "Rulează codex în fundal la câteva minute, cât timp o pagină afișează cote Codex (dezactivat implicit). Codex CLI își gestionează singur autentificarea și o poate reîmprospăta.",
       "s.quotas.lead": "Alege ce servicii AI de programare urmărești și afișezi pe panou și configurează rotația.",
       "s.quotas.tracked": "Servicii AI urmărite",
-      "s.quotas.sharedHint": "Widgeturile Ceas, Cote AI și Inel de cotă urmează această listă, cu excepția cazului în care un widget are propria listă de furnizori.",
+      "s.quotas.sharedHint": "Widgeturile Ceas și Cote AI urmează această listă, cu excepția cazului în care un widget are propria listă de furnizori. Selectorul Inelului de cotă oferă doar aceștia (plus Cursor), iar un inel păstrează furnizorul pe care îl arată deja.",
       "s.w.followProviders": "Urmează furnizorii mei de AI",
       "s.w.followProvidersHint": "Afișează serviciile bifate la „Servicii AI urmărite” în setări. Debifează pentru a alege altele pentru acest widget.",
       "s.quotas.rotate": "Comută automat între furnizori",
