@@ -1486,7 +1486,7 @@ function widgetSummary(w) {
     case 'button': return cfg.shortcuts.find((s) => s.id === o.id)?.label || 'pick a shortcut';
     case 'shortcuts': return (o.ids?.length ? tcv('{n} keys', { n: o.ids.length }) : tc('all keys')) + ' · ' + tcv('{n} columns', { n: o.columns || 4 });
     case 'worldclock': return (o.zones || d.options[0]?.default || []).map((z) => z.split('=')[0]).join(' · ');
-    case 'quotas': case 'codexbar': return (o.providers || ['claude', 'codex', 'antigravity', 'grok']).join(' + ');
+    case 'quotas': case 'codexbar': return (Array.isArray(o.providers) ? o.providers : sharedProviders()).join(' + ');
     case 'quotaring': return `${choice('provider')} · ${choice('limit').split(' (')[0]}`;
     case 'analog': return o.label || o.zone || '';
     case 'topprocs': case 'breathe': return choice(w.type === 'topprocs' ? 'sort' : 'pattern');
@@ -2006,7 +2006,8 @@ function renderStackWidgetsOption(w, o) {
               ...(subO.section ? [h('h4', { class: 'opt-section' }, subO.section)] : []),
               optionField(subW, subO, (key, val) => {
                 item.options = item.options || {};
-                item.options[key] = val;
+                if (val === undefined) delete item.options[key]; // e.g. Follow my AI providers: the card keeps no list
+                else item.options[key] = val;
                 save(false);
               }),
             ])

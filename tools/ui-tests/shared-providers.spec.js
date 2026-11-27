@@ -153,3 +153,33 @@ test('the Quota ring offers only the providers that are on, plus Cursor and its 
   await expect(probe.locator('select option')).toHaveText(['Claude', 'Cursor', 'Grok', 'Claude (work)']);
   await expect(probe.locator('select')).toHaveValue('grok');
 });
+
+test('a Smart Stack card: ticking Follow again leaves no Providers list, and the card still shows Follow after a redraw', async ({ page }) => {
+  await editor(page, ['claude']);
+  const providers = () => page.evaluate(() => window.__w.options.widgets[0].options);
+  const draw = () => page.evaluate(() => {
+    document.getElementById('probe')?.remove();
+    const w = window.__w, box = document.createElement('div');
+    box.id = 'probe';
+    activeStackSubIdx = 0; // the first card's settings are open
+    box.append(renderStackWidgetsOption(w, widgetDef('stack').options.find((o) => o.key === 'widgets')));
+    document.body.prepend(box);
+  });
+  await page.evaluate(() => { window.__w = { type: 'stack', options: { widgets: [{ id: 'card-1', type: 'clock', enabled: true, options: { status: true } }] } }; });
+  await draw();
+  const follow = () => page.locator('#probe').getByRole('checkbox', { name: 'Follow my AI providers' });
+  await expect(follow()).toBeChecked();
+  await follow().uncheck();
+  expect((await providers()).providers).toEqual(['claude']);
+  await follow().check();
+  expect('providers' in await providers()).toBe(false);
+  await draw(); // the card's settings are drawn again, as after closing and opening it
+  await expect(follow()).toBeChecked();
+  await expect(page.locator('#probe').getByRole('checkbox', { name: 'Claude' })).toBeChecked();
+});
+
+test('the page canvas names the providers a following AI quotas widget shows', async ({ page }) => {
+  await editor(page, ['claude']);
+  expect(await page.evaluate(() => widgetSummary({ type: 'quotas', options: {} }))).toBe('claude');
+  expect(await page.evaluate(() => widgetSummary({ type: 'quotas', options: { providers: ['codex', 'grok'] } }))).toBe('codex + grok');
+});
